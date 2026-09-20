@@ -1,0 +1,43 @@
+# Matplotlib style for the figures in the paper. Applied via plotting.use_paper_style().
+# Hex colours are written without a leading '#', which starts a comment in style files.
+
+# Font + LaTeX
+text.usetex:          True
+text.latex.preamble:  \usepackage{amsmath}\usepackage{amssymb}
+font.family:          serif
+font.serif:           Computer Modern Roman
+mathtext.fontset:     cm
+font.size:            10
+
+# Colors (colorblind-friendly, Tableau-like)
+axes.prop_cycle: cycler('color', ['1f77b4', 'ff7f0e', '2ca02c', 'd62728', '9467bd', '8c564b', 'e377c2', '7f7f7f', 'bcbd22', '17becf'])
+
+# Grid + axes
+axes.spines.top:      True
+axes.spines.right:    True
+axes.grid:            False
+grid.color:           0.8
+grid.linestyle:       -
+grid.linewidth:       0.8
+axes.axisbelow:       True
+axes.labelsize:       10
+
+# Ticks
+xtick.minor.visible:  True
+ytick.minor.visible:  True
+xtick.minor.size:     2
+ytick.minor.size:     2
+xtick.direction:      in
+ytick.direction:      in
+xtick.labelsize:      10
+ytick.labelsize:      10
+
+# Legend
+legend.fontsize:      10
+legend.handlelength:  1.5
+legend.handletextpad: 0.2
+
+# Figure
+figure.figsize:       5, 3
+figure.dpi:           300
+savefig.bbox:         tight

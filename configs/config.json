@@ -1,0 +1,20 @@
+{
+    "days_per_year" : 252,
+    "months_per_year" : 12,
+    "simulation_config" : {
+        "SEED" : 52,
+        "N_SAMPLES" : 10000,
+        "IS_dates" : ["1977-01-01", "2004-12-31"],
+        "OOS_dates" : ["2005-01-01", "2024-12-31"]
+    },
+    "backtest_config" : {
+        "warmup_dates" : ["1977-01-01", "1994-12-31"],
+        "backtest_dates" : ["1995-01-01", "2024-12-31"], 
+        "W0" : 1000,
+        "TC" : 0.0015,
+        "tgt_active_risk" : 0.05,
+        "trend_halflife" : 21,
+        "mr_M" : 12,
+        "trend_M" : 1
+    }
+}

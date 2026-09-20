@@ -1,0 +1,21 @@
+name: apm-in-cem
+channels:
+  - pytorch
+  - conda-forge
+
+dependencies:
+  - ipykernel
+  - python=3.12
+  - pip
+  - pandas
+  - numpy
+  - matplotlib
+  - seaborn
+  - statsmodels
+  - scipy
+  - wrds
+  - pip:
+    - arch
+  - pytorch>=2.4
+  - pytest
+  - pyarrow
