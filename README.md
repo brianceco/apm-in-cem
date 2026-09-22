@@ -1,6 +1,6 @@
 # Active Portfolio Management in Concentrated Equity Markets
 
-Official implementation of experiments from the paper, [Citation] ((link)). Inspired by Stochastic Portfolio Theory (SPT), we study the two major drivers of performance for the equal-weighted portfolio relative to the market (capitalization-weighted) portfolio, *market diversity* and *(equal-weighted) dispersion*. We develop and calibrate a continuous-time stochastic model of diversity and dispersion. We backtest a Markowitz-style optimal portfolio under this model and show that, under both mean-reverting and trending modelling assumptions, we outperform both the market and the equal-weighted portfolio between 1977-2024. All experiments are carried out within the S&P500 universe.
+Official implementation of experiments from the paper, [Citation] ((link)). Inspired by Stochastic Portfolio Theory (SPT), we study the two major drivers of performance for the equal-weighted portfolio relative to the market (capitalization-weighted) portfolio, *market diversity* and *(equal-weighted) dispersion*. We develop and calibrate a continuous-time stochastic model of diversity and dispersion. We backtest a Markowitz-style optimal portfolio under this model and show that, under both mean-reverting and trending modelling assumptions, we outperform both the market and the equal-weighted portfolio between 1995-2024. All experiments are carried out within the S&P500 universe.
 
 ## Organization
 
@@ -8,7 +8,7 @@ Official implementation of experiments from the paper, [Citation] ((link)). Insp
 | --- | --- |
 | `src/` | Core Python modules: the CRSP/CBOE/Fama-French data pipeline (`data.py`), the backtesting engine (`backtest.py`), the SDD model and simulation (`simulate.py`), plotting utilities (`plotting.py`), helper functions (`utils.py`), and project configuration and paths (`config.py`, `paths.py`). |
 | `notebooks/` | Jupyter notebooks reproducing experiments within the paper. |
-| `tests/` | Pytest unit tests for the data pipeline, backtesting engine, and utility functions. |
+| `tests/` | Pytest unit tests for the data pipeline, backtesting engine, and utility functions. Must run python src/data.py to download and process data before running tests/test.data.py and tests/test_backtest.py. |
 | `configs/` | `config.json`, holding tunable model and backtest parameters loaded by `src/config.py`. |
 
 The contents of the three Jupyter notebooks in `notebooks/` are as follows:
@@ -38,5 +38,3 @@ After installation, download and process relevant data by calling data module:
 python src/data.py
 ```
 You will be prompted to enter your WRDS username and password to download CRSP return and market cap data. Data is preprocessed following notebook 6 in [CRSP_on_WRDS_introduction](https://github.com/johruf/CRSP_on_WRDS_introduction). Publicly available S&P 500 implied dispersion index (DSPX) will be downloaded from [https://www.cboe.com](CBOE) and Fama-French monthly five-factor data will be downloaded from Ken French's [data library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html).
-
-
