@@ -502,10 +502,10 @@ def run_portfolio(
         # Inherited portfolio weights on day t
         pi = psi_ / W_ if W_ != 0 else np.zeros(N)
 
-        gross_exposure += np.sum(np.abs(pi)) / (T - start_idx - 1)
-
         # Target portfolio for day t
         pi_target = tgt_port_array[t]
+
+        gross_exposure += np.sum(np.abs(pi_target)) / (T - start_idx - 1)
 
         # Normalized dividends
         D_hat = calc_D_hat(D_, W_, pi_target, psi_, tc)
