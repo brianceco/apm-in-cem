@@ -54,7 +54,9 @@ def compress_cmap(
     return ListedColormap(cmap(0.5 * (1 + np.sign(s) * np.abs(s) ** exponent)))
 
 
-def plot_dispersion(signals: pd.DataFrame, dspx: pd.Series, save_fig: bool = True, **kwargs) -> None:
+def plot_dispersion(
+    signals: pd.DataFrame, dspx: pd.Series, save_fig: bool = True, **kwargs
+) -> None:
     """Plot monthly equal-weighted realized dispersion, with a figure-in-figure comparing lagged implied dispersion (DSPX) against rolling cap-weighted realized dispersion."""
     _, ax = plt.subplots(**kwargs)
 
@@ -243,7 +245,9 @@ def plot_portfolio_performance(
     axs[0, 1].set_ylabel("$\\lambda$")
     axs[1, 1].set_xlabel("Year")
 
-    diversity_monthly.loc[we:].plot(ax=axs[0, 0], color=DIVERSITY_COLOR, label="$\\varphi$")
+    diversity_monthly.loc[we:].plot(
+        ax=axs[0, 0], color=DIVERSITY_COLOR, label="$\\varphi$"
+    )
 
     ax2 = axs[0, 0].twinx()
     dispersion_monthly.loc[we:].plot(

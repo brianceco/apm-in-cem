@@ -4,10 +4,10 @@ from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 import torch
 from scipy import stats
 from scipy.optimize import minimize
-import statsmodels.api as sm
 
 
 class TargetKernels:
@@ -122,7 +122,15 @@ def get_target(
     return target.squeeze()
 
 
-def calibrate_c_delta(diversity_monthly: pd.Series, rd_eql_monthly: pd.Series, log_V_eql: pd.Series, START_DATE: str, WARMUP_END_DATE: str, dt: float, print_summary: bool = True):
+def calibrate_c_delta(
+    diversity_monthly: pd.Series,
+    rd_eql_monthly: pd.Series,
+    log_V_eql: pd.Series,
+    START_DATE: str,
+    WARMUP_END_DATE: str,
+    dt: float,
+    print_summary: bool = True,
+):
     x_full = 0.5 * rd_eql_monthly.iloc[1:].cumsum() * dt
     div_centered = diversity_monthly.diff().cumsum()
     y = (log_V_eql - div_centered).dropna().loc[START_DATE:WARMUP_END_DATE]
@@ -134,6 +142,7 @@ def calibrate_c_delta(diversity_monthly: pd.Series, rd_eql_monthly: pd.Series, l
     if print_summary:
         print(f"Regression summary:\n{lr.summary()}")
     return c_delta, fit
+
 
 def get_ou_params(data: pd.Series, dt: float) -> tuple[float, float, float]:
     """Estimate the parameters of an Ornstein-Uhlenbeck process from a time series using an AR(1) model."""

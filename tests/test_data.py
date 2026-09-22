@@ -55,6 +55,7 @@ monthly_eql_wgts = pd.read_csv(
     parse_dates=True,
 )
 
+
 def test_data_cleaning_no_change():
     permno = 45356
 

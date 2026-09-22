@@ -26,6 +26,7 @@ FAMA_FRENCH_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F
 START_DATE = "1977-01-01"  # S&P500 in CRSP database first reaches 99% coverage in 1957-03-01. We begin at 1977-01-01 as financials are not included in the S&P500 until 1976-12-31 which introduces artificial spike in diversity
 END_DATE = "2024-12-31"
 
+
 def download_sp500_raw(
     start_date: str, end_date: str, save: bool = True
 ) -> pd.DataFrame:
