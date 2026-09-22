@@ -17,7 +17,7 @@ The contents of the three Jupyter notebooks in `notebooks/` are as follows:
 3. `3_backtest.ipynb`: Backtests optimal portfolio under mean-reverting and trending SDD models. Uses 1977-1994/1995-2024 as in-sample/out-of-sample split. Carries out sensitivity analysis of trading cost penalty parameters, and Fama-French 3-factor regressions. Use calibrated trading cost parameters from mean-reverting model to simulate performance of optimal lambda-tilt portfolio under simulated SDD model. 
 
 **Warnings:** 
-1. The notebooks **must** be run in the order in which they are numbered as they have (partial) logical dependencies on each other.**
+1. The notebooks **must** be run in the order in which they are numbered as they have (partial) logical dependencies on each other.
 
 2. Rendering notebook figures **requires** $\LaTeX$ installation on local machine by default. Set `usetex=False` when calling `use_paper_style` at top of notebooks to turn off TeX formatting.
 
