@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -8,40 +7,57 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import backtest as bt
+from paths import DATA, relative_path
+
+START_YEAR = 1977
+
+PROCESSED = DATA / "processed"
+
+# check that the monthly panels and signals have been written by src/data.py
+required = [
+    PROCESSED / f"rets_monthly_{START_YEAR}.csv",
+    PROCESSED / f"caps_monthly_{START_YEAR}.csv",
+    PROCESSED / f"mkt_wgts_monthly_{START_YEAR}.csv",
+    PROCESSED / f"eql_wgts_monthly_{START_YEAR}.csv",
+    PROCESSED / f"signals_{START_YEAR}.csv",
+    PROCESSED / f"signals_clean_{START_YEAR}.csv",
+]
+missing = [relative_path(path) for path in required if not path.exists()]
+if missing:
+    raise ValueError(
+        "Run `python src/data.py` first.\n"
+        f"Missing {len(missing)} data file(s):\n" + "\n".join(missing)
+    )
 
 monthly_rets = pd.read_csv(
-    os.path.join(os.path.dirname(__file__), "../data/processed/rets_monthly_1977.csv"),
+    PROCESSED / f"rets_monthly_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )
 monthly_caps = pd.read_csv(
-    os.path.join(os.path.dirname(__file__), "../data/processed/caps_monthly_1977.csv"),
+    PROCESSED / f"caps_monthly_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )
 monthly_mkt_wgts = pd.read_csv(
-    os.path.join(
-        os.path.dirname(__file__), "../data/processed/mkt_wgts_monthly_1977.csv"
-    ),
+    PROCESSED / f"mkt_wgts_monthly_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )
 monthly_eql_wgts = pd.read_csv(
-    os.path.join(
-        os.path.dirname(__file__), "../data/processed/eql_wgts_monthly_1977.csv"
-    ),
+    PROCESSED / f"eql_wgts_monthly_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )
 
 signals = pd.read_csv(
-    os.path.join(os.path.dirname(__file__), "../data/processed/signals_1977.csv"),
+    PROCESSED / f"signals_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )
 
 signals_clean = pd.read_csv(
-    os.path.join(os.path.dirname(__file__), "../data/processed/signals_clean_1977.csv"),
+    PROCESSED / f"signals_clean_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )

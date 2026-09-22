@@ -6,51 +6,59 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from paths import DATA
+from paths import DATA, relative_path
 
-start_year = 1977
+START_YEAR = 1977  
 
-# check if the raw and clean data files exist
-assert Path(f"{DATA}/raw/sp500_raw_{start_year}.parquet").exists()
-assert Path(f"{DATA}/processed/sp500_clean_{start_year}.parquet").exists()
-assert Path(f"{DATA}/raw/sp500_membership_{start_year}.csv").exists()
-assert Path(f"{DATA}/processed/rets_monthly_{start_year}.csv").exists()
-assert Path(f"{DATA}/processed/caps_monthly_{start_year}.csv").exists()
-assert Path(f"{DATA}/processed/mkt_wgts_monthly_{start_year}.csv").exists()
-assert Path(f"{DATA}/processed/eql_wgts_monthly_{start_year}.csv").exists()
+# check that the raw and clean data files have been written by src/data.py
+required = [
+    DATA / "raw" / f"sp500_raw_{START_YEAR}.parquet",
+    DATA / "raw" / f"sp500_membership_{START_YEAR}.csv",
+    DATA / "processed" / f"sp500_clean_{START_YEAR}.parquet",
+    DATA / "processed" / f"rets_monthly_{START_YEAR}.csv",
+    DATA / "processed" / f"caps_monthly_{START_YEAR}.csv",
+    DATA / "processed" / f"mkt_wgts_monthly_{START_YEAR}.csv",
+    DATA / "processed" / f"eql_wgts_monthly_{START_YEAR}.csv",
+]
+missing = [relative_path(path) for path in required if not path.exists()]
+if missing:
+    raise ValueError(
+        "Run `python src/data.py` first.\n"
+        f"Missing {len(missing)} data file(s):\n" + "\n".join(missing)
+    )
 
-sp500_raw = pd.read_parquet(f"{DATA}/raw/sp500_raw_{start_year}.parquet")
+sp500_raw = pd.read_parquet(f"{DATA}/raw/sp500_raw_{START_YEAR}.parquet")
 
 sp500_raw["date"] = pd.to_datetime(sp500_raw["date"])
 
-sp500_clean = pd.read_parquet(f"{DATA}/processed/sp500_clean_{start_year}.parquet")
+sp500_clean = pd.read_parquet(f"{DATA}/processed/sp500_clean_{START_YEAR}.parquet")
 sp500_clean["date"] = pd.to_datetime(sp500_clean["date"])
 
 sp500_members = pd.read_csv(
-    f"{DATA}/raw/sp500_membership_{start_year}.csv",
+    f"{DATA}/raw/sp500_membership_{START_YEAR}.csv",
     parse_dates=["start", "ending"],
 )
 
 monthly_rets = pd.read_csv(
-    f"{DATA}/processed/rets_monthly_{start_year}.csv",
+    f"{DATA}/processed/rets_monthly_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )
 
 monthly_caps = pd.read_csv(
-    f"{DATA}/processed/caps_monthly_{start_year}.csv",
+    f"{DATA}/processed/caps_monthly_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )
 
 monthly_mkt_wgts = pd.read_csv(
-    f"{DATA}/processed/mkt_wgts_monthly_{start_year}.csv",
+    f"{DATA}/processed/mkt_wgts_monthly_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )
 
 monthly_eql_wgts = pd.read_csv(
-    f"{DATA}/processed/eql_wgts_monthly_{start_year}.csv",
+    f"{DATA}/processed/eql_wgts_monthly_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )
