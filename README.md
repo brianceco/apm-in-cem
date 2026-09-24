@@ -1,6 +1,6 @@
 # Active Portfolio Management in Concentrated Equity Markets
 
-Official implementation of experiments from the paper, [Citation] ((link)). Inspired by Stochastic Portfolio Theory (SPT), we study the two major drivers of performance for the equal-weighted portfolio relative to the market (capitalization-weighted) portfolio, *market diversity* and *(equal-weighted) dispersion*. We develop and calibrate a continuous-time stochastic model of diversity and dispersion. We backtest a Markowitz-style optimal portfolio under this model and show that, under both mean-reverting and trending modelling assumptions, we outperform the market and the equal-weighted portfolio between 1995-2024. All experiments are carried out within the S&P 500 universe.
+Official implementation of experiments from the paper, [Active Portfolio Management in Concentrated Equity Markets](https://arxiv.org/abs/2609.27113). Inspired by Stochastic Portfolio Theory (SPT), we study the two major drivers of performance for the equal-weighted portfolio relative to the market (capitalization-weighted) portfolio, *market diversity* and *(equal-weighted) dispersion*. We develop and calibrate a continuous-time stochastic model of diversity and dispersion. We backtest a Markowitz-style optimal portfolio under this model and show that, under both mean-reverting and trending modelling assumptions, we outperform the market and the equal-weighted portfolio between 1995-2024. All experiments are carried out within the S&P 500 universe.
 
 ## Organization
 
