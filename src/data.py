@@ -1,5 +1,6 @@
 """Dataset utilities for downloading and processing S&P 500 monthly return + market cap data from WRDS, as well as S&P 500 implied dispersion index from CBOE and Fama-French 5-factor data from Dartmouth. The processed data is saved to disk for use in backtesting and analysis."""
 
+import contextlib
 import io
 import os
 import sys
@@ -25,6 +26,8 @@ FAMA_FRENCH_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F
 
 START_DATE = "1977-01-01"  # S&P500 in CRSP database first reaches 99% coverage in 1957-03-01. We begin at 1977-01-01 as financials are not included in the S&P500 until 1976-12-31 which introduces artificial spike in diversity
 END_DATE = "2024-12-31"
+
+LOG_PATH = DATA / "data.log"
 
 
 def download_sp500_raw(
@@ -461,17 +464,16 @@ def format_data(
     """Build the monthly panels and signals from the cleaned data and write them to the processed data directory, with signals computed both with and without extreme returns."""
     print(f"Formatting data for {start_date} and saving to disk.")
 
-    df_clean = df_clean_full[
-        df_clean_full["bcktst_flg"] < 10.0
-    ].copy()  # remove extreme returns
+    df_winsor_full = df_clean_full.copy()
+    df_winsor_full["ret"] = df_winsor_full["ret"].clip(lower=CUTOFF_SMALL_RETURN, upper=CUTOFF_LARGE_RETURN) # winsorize returns to avoid extreme values in the signals
 
     rets_monthly, caps_monthly, mkt_wgts_monthly, eql_wgts_monthly, signals = (
         get_dataframes(df_clean_full, sp500_members)
     )
     sy = start_date[:4]
 
-    _, _, _, _, signals_clean = get_dataframes(
-        df_clean, sp500_members
+    _, _, _, _, signals_winsor = get_dataframes(
+        df_winsor_full, sp500_members
     )  # construct signals use non-extreme returns
 
     # Save to processed data directory
@@ -492,9 +494,9 @@ def format_data(
     save_path = dir_path / f"signals_{sy}.csv"
     signals.to_csv(save_path)
     print(f"Saved signals to {relative_path(save_path)}")
-    save_path = dir_path / f"signals_clean_{sy}.csv"
-    signals_clean.to_csv(save_path)
-    print(f"Saved cleaned signals to {relative_path(save_path)}")
+    save_path = dir_path / f"signals_winsor_{sy}.csv"
+    signals_winsor.to_csv(save_path)
+    print(f"Saved winsorized signals to {relative_path(save_path)}")
 
     print("Done.")
 
@@ -556,21 +558,51 @@ def fetch_fama_french(timeout: int = 60) -> None:
     print(f"Saved Fama-French data to {relative_path(save_path)}")
 
 
+class Tee:
+    """Stream that writes to both the terminal and a log file."""
+
+    def __init__(self, terminal, log_file) -> None:
+        self.terminal = terminal
+        self.log_file = log_file
+
+    def write(self, text: str) -> int:
+        self.terminal.write(text)
+        self.log_file.write(text)
+        return len(text)
+
+    def flush(self) -> None:
+        self.terminal.flush()
+        self.log_file.flush()
+
+    def __getattr__(self, name: str):
+        # defer everything else (isatty, encoding, ...) to the terminal
+        return getattr(self.terminal, name)
+
+
 def main() -> None:
-    """Download, clean and save the CRSP, CBOE and Fama-French datasets used throughout the paper."""
-    df_raw = download_sp500_raw(START_DATE, END_DATE)
+    """Download, clean and save the CRSP, CBOE and Fama-French datasets used throughout the paper, copying all printed output to LOG_PATH."""
+    os.makedirs(DATA, exist_ok=True)
+    with (
+        open(LOG_PATH, "w") as log_file,
+        contextlib.redirect_stdout(Tee(sys.stdout, log_file)),
+    ):
+        df_raw = download_sp500_raw(START_DATE, END_DATE)
 
-    sp500_members = download_sp500_membership(START_DATE)
+        sp500_members = download_sp500_membership(START_DATE)
 
-    df_clean = clean_raw_data(data_raw=df_raw)
+        df_clean_full = clean_raw_data(data_raw=df_raw)
 
-    format_data(
-        df_clean_full=df_clean, sp500_members=sp500_members, start_date=START_DATE
-    )
+        format_data(
+            df_clean_full=df_clean_full,
+            sp500_members=sp500_members,
+            start_date=START_DATE,
+        )
 
-    fetch_dspx()
+        fetch_dspx()
 
-    fetch_fama_french()
+        fetch_fama_french()
+
+        print(f"Saved log to {relative_path(LOG_PATH)}")
 
 
 if __name__ == "__main__":

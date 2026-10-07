@@ -4,8 +4,10 @@ figures/
 results/
 __pycache__/
 .vscode/
+.DS_Store
 6_Preparing_backtesting_daily.ipynb
 review/
 CODE_REVIEW.md
 REPOSITORY_AUDIT_2026-09-14.md
 REPOSITORY_REAUDIT_2026-09-14.md
+compare_notebooks.py
