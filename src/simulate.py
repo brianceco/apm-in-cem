@@ -5,7 +5,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+from scipy.optimize import brentq, minimize
 
 from config import DT_DAILY
 from paths import RESULTS, relative_path
@@ -280,9 +280,9 @@ class MeanRevertingSDDModel:
         self,
         phi: pd.Series | pd.DataFrame,
         delta: pd.Series | pd.DataFrame,
-        gamma: float | np.ndarray = 0,
+        gamma: float = 0,
     ) -> pd.Series | pd.DataFrame:
-        """Compute the frictionless optimal tilt process lambda_0(t) for simulated diversity and dispersion paths under the mean-reverting model. gamma is a scalar or one value per path (column)."""
+        """Compute the frictionless optimal tilt process lambda_0(t) for simulated diversity and dispersion paths under the mean-reverting model."""
         kappa = self.config["kappa_phi"]
         mu = self.config["phi_bar"]
         nu_phi = self.config["nu_phi"]
@@ -294,14 +294,14 @@ class MeanRevertingSDDModel:
 
     def _get_lbda(
         self,
-        gamma: float | np.ndarray,
+        gamma: float,
         lbda_0_init: np.ndarray | float,
         Lbda_1: float,
         Lbda_2: float,
         phi_values: np.ndarray,
         delta_values: np.ndarray,
     ) -> np.ndarray:
-        """Get the smoothed optimal switching process lambda(t) for simulated diversity and dispersion paths under the mean-reverting model. gamma is a scalar or one value per path."""
+        """Get the smoothed optimal switching process lambda(t) for simulated diversity and dispersion paths under the mean-reverting model."""
         kappa_phi = self.config["kappa_phi"]
         kappa_delta = self.config["kappa_delta"]
         nu_delta = self.config["nu_delta"]
@@ -314,11 +314,9 @@ class MeanRevertingSDDModel:
 
         N, M = phi_values.shape
 
-        gamma = np.broadcast_to(np.asarray(gamma, dtype=float).ravel(), (M,))
-
-        C = np.sqrt((1 + gamma + Lbda_1) / Lbda_2)  # (M,)
+        C = np.sqrt((1 + gamma + Lbda_1) / Lbda_2)
         T_minus_t = dt * (N - np.arange(N + 1))  # T - t on the grid, (N+1,)
-        G = np.cosh(T_minus_t[:, None] * C[None, :])  # G(t), (N+1, M)
+        G = np.cosh(C * T_minus_t)  # G(t), (N+1,)
 
         if np.any(G == np.inf):
             raise ValueError(
@@ -341,16 +339,16 @@ class MeanRevertingSDDModel:
                 phi_t=phi_t,
                 log_delta_t=log_delta_t,
                 P=P,
-            ).reshape(P, M)
+            )
 
-            weights = np.full((P, 1), dt)
+            weights = np.full(P, dt)
             weights[[0, -1]] = 0.5 * dt
-            weights = weights * G[t:]  # (P, M)
+            weights *= G[t:]
 
-            F[t] = (weights * target).sum(axis=0)
+            F[t] = weights @ target
 
         # lbda(t) = G(t) [lbda_0 / G(0) + int_0^t (1 + gamma) F(s) / (Lbda_2 G(s)^2) ds],
-        G_s = G[:N]  # G(s) on the grid, (N, M)
+        G_s = G[:N, None]  # G(s) on the grid, (N, 1)
         integrand = (1 + gamma) * F / G_s / (Lbda_2 * G_s)  # (N, M) prevent overflow
         s_integral = np.zeros((N, M))
         s_integral[1:] = np.cumsum(0.5 * dt * (integrand[:-1] + integrand[1:]), axis=0)
@@ -364,50 +362,21 @@ class MeanRevertingSDDModel:
         target_active_risk: float,
         phi_samples: pd.Series | pd.DataFrame,
         delta_samples: pd.Series | pd.DataFrame,
-        gamma_bounds: tuple[float, float] = (1, 10e3),
-        n_iter: int = 60,
-    ) -> np.ndarray:
-        """Calibrate gamma separately on each path so the log relative value of the optimal frictionless tilt process achieves the target active risk on that path, returning one gamma per path."""
+    ) -> float:
+        """Calibrate gamma so log relative value of optimal frictionless tilt process achieves the target active risk for simulated diversity and dispersion paths under the mean-reverting model."""
         nu_phi = self.config["nu_phi"]
         dt = self.dt
 
-        phi_vals = np.asarray(phi_samples, dtype=float).reshape(len(phi_samples), -1)
-        delta_vals = np.asarray(delta_samples, dtype=float).reshape(
-            len(delta_samples), -1
-        )
+        def calibrate_gamma(gamma: float) -> float:
+            lbda_0 = self.get_lbda_0(phi_samples, delta_samples, gamma)
+            log_V_lbda = get_log_V_lbda(nu_phi, dt, phi_samples, delta_samples, lbda_0)
+            mean_active_risk = (
+                log_V_lbda.diff().std() / np.sqrt(dt)
+            ).mean()  # compute the average annualized active risk across time and sample paths
+            return target_active_risk - mean_active_risk
 
-        # gamma enters only through lbda_0(gamma) = lbda_0(0) / (1 + gamma), so with
-        # L = 1 / (1 + gamma) each increment of get_log_V_lbda is a * L + b * L**2
-        lbda_0 = np.asarray(self.get_lbda_0(phi_vals, delta_vals))[:-1]  # lagged
-        delta_lag = delta_vals[:-1]
-        a = lbda_0 * (np.diff(phi_vals, axis=0) + 0.5 * delta_lag * dt) + (
-            0.5 * lbda_0 * nu_phi**2 * delta_lag * dt
-        )
-        b = -0.5 * lbda_0**2 * nu_phi**2 * delta_lag * dt
-
-        def excess_risk(L: np.ndarray) -> np.ndarray:
-            # annualized active risk of each path minus the target
-            return (a * L + b * L**2).std(axis=0) / np.sqrt(dt) - target_active_risk
-            
-
-        # bracket in L: the largest gamma gives the smallest L
-        L_lo = np.full(a.shape[1], 1 / (1 + gamma_bounds[1]))
-        L_hi = np.full(a.shape[1], 1 / (1 + gamma_bounds[0]))
-        unbracketed = (excess_risk(L_lo) > 0) | (excess_risk(L_hi) < 0)
-        if unbracketed.any():
-            raise ValueError(
-                f"Target active risk not attainable for gamma in {gamma_bounds} on "
-                f"{unbracketed.sum()} of {unbracketed.size} paths."
-            )
-
-        # vectorized bisection, keeping excess_risk(L_lo) <= 0 <= excess_risk(L_hi)
-        for _ in range(n_iter):
-            L_mid = 0.5 * (L_lo + L_hi)
-            above = excess_risk(L_mid) > 0
-            L_hi = np.where(above, L_mid, L_hi)
-            L_lo = np.where(above, L_lo, L_mid)
-
-        return 1 / (0.5 * (L_lo + L_hi)) - 1
+        res = brentq(calibrate_gamma, a=1, b=10e3)
+        return res
 
     def _get_performance(
         self,
@@ -435,11 +404,12 @@ class MeanRevertingSDDModel:
     def backtest(
         self,
         target_active_risk: float,
+        gamma: float | None,
         Lbda_1: float,
         Lbda_2: float,
         samples: list[pd.DataFrame] | list[pd.Series] | None = None,
         **kwargs,
-    ) -> tuple[dict, dict, dict, dict, np.ndarray]:
+    ) -> tuple[dict, dict, dict, dict, float]:
         """Backtest the frictionless and optimal tilt processes on simulated paths, returning their lambda, gross and net log relative value, and trading cost rate."""
         if not Lbda_2:
             raise ValueError("Lbda_2 must be provided.")
@@ -471,15 +441,9 @@ class MeanRevertingSDDModel:
 
         diversity_qv_rate = nu_phi**2 * delta_samples
 
-        gamma = self._set_gamma(target_active_risk, phi_samples, delta_samples)
+        gamma = self._set_gamma(target_active_risk, phi_samples, delta_samples) if gamma is None else gamma
 
-        if gamma.size == 1:
-            print(f"Calibrated gamma: {gamma[0]:.3f}")
-        else:
-            q05, q50, q95 = np.quantile(gamma, [0.05, 0.5, 0.95])
-            print(
-                f"Calibrated per-path gamma: median {q50:.3f}, 5-95% range [{q05:.3f}, {q95:.3f}]"
-            )
+        print(f"Calibrated gamma: {gamma:.3f}")
 
         lbda_0 = self.get_lbda_0(phi_samples, delta_samples, gamma)
         lbda_dict["lbda_0"] = lbda_0
