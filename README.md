@@ -22,7 +22,7 @@ The contents of the three Jupyter notebooks in `notebooks/` are as follows:
 2. Rendering notebook figures **requires** $\LaTeX$ installation on local machine by default. Set `usetex=False` when calling `use_paper_style` at top of notebooks to turn off TeX formatting.
 
 ## Data cleaning
-CRSP data is preprocessed according to Notebook 6 in https://github.com/johruf/CRSP_on_WRDS_introduction. In addition, we correct an erroneous de-listing return for PERMNO 16731 on 1977-10-14 using the acquisition price of $85,000,000. See footnote (NUM) in paper for more details.
+CRSP data is preprocessed according to Notebook 6 in https://github.com/johruf/CRSP_on_WRDS_introduction. In addition, we correct an erroneous de-listing return for PERMNO 16731 on 1977-10-14 using the acquisition price of $85,000,000. See footnote (3) in paper for more details.
 
 ## Installation
 Run the following command in your terminal:
