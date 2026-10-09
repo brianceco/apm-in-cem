@@ -114,7 +114,7 @@ PRC_FLAGS = ["TR", "BA", "MP", "DA", "NT", "DP", "HA", "DM", "SU"]
 # TR = total return
 # BA = bid-ask average
 # MP = missing price
-# DA = daily average
+# DA = delisting amount
 # NT = not traded
 # DP = delisting price
 # HA = half-adjusted
@@ -145,6 +145,11 @@ CUTOFF_SMALL_RETURN = -0.5
 TEMPORARY_DELISTING_RETURN = -0.1
 MISSING_DELIST_RETURN = -0.3
 # We define a security as being "temoprarily delisted" if the security's previous market cap is available but return is not
+
+# CRSP records a -98.995% delisting return for PERMNO 16731 on 1977-10-14, although it was acquired for cash at $85,000,000 (caps are in $ thousands)
+ACQUIRED_PERMNO = 16731
+ACQUISITION_DATE = pd.Timestamp("1977-10-14")
+ACQUISITION_CAP = 85_000.0
 
 
 def preprocess_prc_flags(df: pd.DataFrame) -> pd.DataFrame:
@@ -331,6 +336,21 @@ def clean_extreme_returns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def fix_acquisition_return(df: pd.DataFrame) -> pd.DataFrame:
+    """Replace the delisting return of ACQUIRED_PERMNO by the return from its previous market cap to the acquisition price."""
+    prev_cap = float(df.loc[ACQUISITION_DATE, ("cap_lag1", ACQUIRED_PERMNO)])
+    old_ret = df.loc[ACQUISITION_DATE, ("ret", ACQUIRED_PERMNO)]
+    new_ret = ACQUISITION_CAP / prev_cap - 1
+
+    df.loc[ACQUISITION_DATE, ("ret", ACQUIRED_PERMNO)] = new_ret
+
+    print(
+        f"Replaced the return of PERMNO {ACQUIRED_PERMNO} on {ACQUISITION_DATE.date()} from {old_ret:.5f} to {new_ret:.5f} (acquisition price ${ACQUISITION_CAP * 1000:,.0f} vs previous cap ${prev_cap * 1000:,.0f})."
+    )
+
+    return df
+
+
 # -----------------------------
 # Complete Pipeline
 # -----------------------------
@@ -343,7 +363,8 @@ def clean_raw_data(
     1) Add custom price flags (one of {1,10}*{0,1,2,3,4,5}).
     2) Clean data (missing/flagged returns/caps).
     3) Clean "temporary delistings" and missing returns.
-    4) Flag extreme returns
+    4) Replace the incorrect delisting return of ACQUIRED_PERMNO.
+    5) Flag extreme returns
 
     Optionally save cleaned data and return it.
     """
@@ -359,6 +380,8 @@ def clean_raw_data(
     data = clean_temporary_delistings_and_missing_returns(data)
 
     print("Cleaned temporary delistings and missing returns.")
+
+    data = fix_acquisition_return(data)
 
     data = clean_extreme_returns(data)
 
@@ -426,7 +449,7 @@ def get_dataframes(
         .astype(np.float64)
     )
 
-    sp500_mask = sp500_membership_mask(rets.index, rets.columns, sp500_members)
+    sp500_mask =sp500_membership_mask(rets.index, rets.columns, sp500_members)
 
     # only keep S&P 500 constituents in the cap data
     caps = caps.where(sp500_mask)
@@ -461,20 +484,13 @@ def get_dataframes(
 def format_data(
     df_clean_full: pd.DataFrame, sp500_members: pd.DataFrame, start_date: str
 ) -> None:
-    """Build the monthly panels and signals from the cleaned data and write them to the processed data directory, with signals computed both with and without extreme returns."""
+    """Build the monthly panels and signals from the cleaned data and write them to the processed data directory."""
     print(f"Formatting data for {start_date} and saving to disk.")
-
-    df_winsor_full = df_clean_full.copy()
-    df_winsor_full["ret"] = df_winsor_full["ret"].clip(lower=CUTOFF_SMALL_RETURN, upper=CUTOFF_LARGE_RETURN) # winsorize returns to avoid extreme values in the signals
 
     rets_monthly, caps_monthly, mkt_wgts_monthly, eql_wgts_monthly, signals = (
         get_dataframes(df_clean_full, sp500_members)
     )
     sy = start_date[:4]
-
-    _, _, _, _, signals_winsor = get_dataframes(
-        df_winsor_full, sp500_members
-    )  # construct signals use non-extreme returns
 
     # Save to processed data directory
     dir_path = DATA / "processed"
@@ -494,9 +510,6 @@ def format_data(
     save_path = dir_path / f"signals_{sy}.csv"
     signals.to_csv(save_path)
     print(f"Saved signals to {relative_path(save_path)}")
-    save_path = dir_path / f"signals_winsor_{sy}.csv"
-    signals_winsor.to_csv(save_path)
-    print(f"Saved winsorized signals to {relative_path(save_path)}")
 
     print("Done.")
 
