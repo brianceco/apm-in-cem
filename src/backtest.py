@@ -793,7 +793,7 @@ class LbdaPortfolio:
         ew_terminal_ac = ew_active_tc_full.loc[:we].iloc[-1]
 
         Lbda_1 = 2 * ew_terminal_ac / terminal_div_qv
-        print(f"Lbda_1: {Lbda_1:.3f}.")
+        print(f"Lbda_1: {Lbda_1:.3f}")
         return Lbda_1
 
     def _calibrate_Lbda_2(self, name: str) -> tuple[float, pd.Series, pd.Series]:
