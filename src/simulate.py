@@ -404,6 +404,7 @@ class MeanRevertingSDDModel:
     def backtest(
         self,
         target_active_risk: float,
+        gamma: float | None,
         Lbda_1: float,
         Lbda_2: float,
         samples: list[pd.DataFrame] | list[pd.Series] | None = None,
@@ -440,7 +441,11 @@ class MeanRevertingSDDModel:
 
         diversity_qv_rate = nu_phi**2 * delta_samples
 
-        gamma = self._set_gamma(target_active_risk, phi_samples, delta_samples)
+        gamma = (
+            self._set_gamma(target_active_risk, phi_samples, delta_samples)
+            if gamma is None
+            else gamma
+        )
 
         print(f"Calibrated gamma: {gamma:.3f}")
 

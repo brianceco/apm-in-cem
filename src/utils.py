@@ -125,15 +125,17 @@ def get_target(
 def calibrate_c_delta(
     diversity_monthly: pd.Series,
     rd_eql_monthly: pd.Series,
-    log_V_eql: pd.Series,
+    dlog_V_eql: pd.Series,
     START_DATE: str,
     WARMUP_END_DATE: str,
     dt: float,
     print_summary: bool = True,
 ):
-    x_full = 0.5 * rd_eql_monthly.iloc[1:].cumsum() * dt
-    div_centered = diversity_monthly.diff().cumsum()
-    y = (log_V_eql - div_centered).dropna().loc[START_DATE:WARMUP_END_DATE]
+    """Calibrate the coefficient c_delta to enforce the master formula dlogV^ew - dphi(t) = c_delta * rd_eql * Delta_t."""
+    x_full = 0.5 * rd_eql_monthly.iloc[1:] * dt
+    div_centered = diversity_monthly.diff().dropna()
+    y_full = dlog_V_eql.iloc[1:] - div_centered
+    y = y_full.loc[START_DATE:WARMUP_END_DATE]
     x = x_full.loc[START_DATE:WARMUP_END_DATE]
 
     lr = sm.OLS(y, x).fit()

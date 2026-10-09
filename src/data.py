@@ -1,5 +1,6 @@
 """Dataset utilities for downloading and processing S&P 500 monthly return + market cap data from WRDS, as well as S&P 500 implied dispersion index from CBOE and Fama-French 5-factor data from Dartmouth. The processed data is saved to disk for use in backtesting and analysis."""
 
+import contextlib
 import io
 import os
 import sys
@@ -25,6 +26,8 @@ FAMA_FRENCH_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F
 
 START_DATE = "1977-01-01"  # S&P500 in CRSP database first reaches 99% coverage in 1957-03-01. We begin at 1977-01-01 as financials are not included in the S&P500 until 1976-12-31 which introduces artificial spike in diversity
 END_DATE = "2024-12-31"
+
+LOG_PATH = DATA / "data.log"
 
 
 def download_sp500_raw(
@@ -111,7 +114,7 @@ PRC_FLAGS = ["TR", "BA", "MP", "DA", "NT", "DP", "HA", "DM", "SU"]
 # TR = total return
 # BA = bid-ask average
 # MP = missing price
-# DA = daily average
+# DA = delisting amount
 # NT = not traded
 # DP = delisting price
 # HA = half-adjusted
@@ -142,6 +145,11 @@ CUTOFF_SMALL_RETURN = -0.5
 TEMPORARY_DELISTING_RETURN = -0.1
 MISSING_DELIST_RETURN = -0.3
 # We define a security as being "temoprarily delisted" if the security's previous market cap is available but return is not
+
+# CRSP records a -98.995% delisting return for PERMNO 16731 on 1977-10-14, although it was acquired for cash at $85,000,000 (caps are in $ thousands)
+ACQUIRED_PERMNO = 16731
+ACQUISITION_DATE = pd.Timestamp("1977-10-14")
+ACQUISITION_CAP = 85_000.0
 
 
 def preprocess_prc_flags(df: pd.DataFrame) -> pd.DataFrame:
@@ -328,6 +336,21 @@ def clean_extreme_returns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def fix_acquisition_return(df: pd.DataFrame) -> pd.DataFrame:
+    """Replace the delisting return of ACQUIRED_PERMNO by the return from its previous market cap to the acquisition price."""
+    prev_cap = float(df.loc[ACQUISITION_DATE, ("cap_lag1", ACQUIRED_PERMNO)])
+    old_ret = df.loc[ACQUISITION_DATE, ("ret", ACQUIRED_PERMNO)]
+    new_ret = ACQUISITION_CAP / prev_cap - 1
+
+    df.loc[ACQUISITION_DATE, ("ret", ACQUIRED_PERMNO)] = new_ret
+
+    print(
+        f"Replaced the return of PERMNO {ACQUIRED_PERMNO} on {ACQUISITION_DATE.date()} from {old_ret:.5f} to {new_ret:.5f} (acquisition price ${ACQUISITION_CAP * 1000:,.0f} vs previous cap ${prev_cap * 1000:,.0f})."
+    )
+
+    return df
+
+
 # -----------------------------
 # Complete Pipeline
 # -----------------------------
@@ -340,7 +363,8 @@ def clean_raw_data(
     1) Add custom price flags (one of {1,10}*{0,1,2,3,4,5}).
     2) Clean data (missing/flagged returns/caps).
     3) Clean "temporary delistings" and missing returns.
-    4) Flag extreme returns
+    4) Replace the incorrect delisting return of ACQUIRED_PERMNO.
+    5) Flag extreme returns
 
     Optionally save cleaned data and return it.
     """
@@ -356,6 +380,8 @@ def clean_raw_data(
     data = clean_temporary_delistings_and_missing_returns(data)
 
     print("Cleaned temporary delistings and missing returns.")
+
+    data = fix_acquisition_return(data)
 
     data = clean_extreme_returns(data)
 
@@ -458,21 +484,13 @@ def get_dataframes(
 def format_data(
     df_clean_full: pd.DataFrame, sp500_members: pd.DataFrame, start_date: str
 ) -> None:
-    """Build the monthly panels and signals from the cleaned data and write them to the processed data directory, with signals computed both with and without extreme returns."""
+    """Build the monthly panels and signals from the cleaned data and write them to the processed data directory."""
     print(f"Formatting data for {start_date} and saving to disk.")
-
-    df_clean = df_clean_full[
-        df_clean_full["bcktst_flg"] < 10.0
-    ].copy()  # remove extreme returns
 
     rets_monthly, caps_monthly, mkt_wgts_monthly, eql_wgts_monthly, signals = (
         get_dataframes(df_clean_full, sp500_members)
     )
     sy = start_date[:4]
-
-    _, _, _, _, signals_clean = get_dataframes(
-        df_clean, sp500_members
-    )  # construct signals use non-extreme returns
 
     # Save to processed data directory
     dir_path = DATA / "processed"
@@ -492,9 +510,6 @@ def format_data(
     save_path = dir_path / f"signals_{sy}.csv"
     signals.to_csv(save_path)
     print(f"Saved signals to {relative_path(save_path)}")
-    save_path = dir_path / f"signals_clean_{sy}.csv"
-    signals_clean.to_csv(save_path)
-    print(f"Saved cleaned signals to {relative_path(save_path)}")
 
     print("Done.")
 
@@ -556,21 +571,51 @@ def fetch_fama_french(timeout: int = 60) -> None:
     print(f"Saved Fama-French data to {relative_path(save_path)}")
 
 
+class Tee:
+    """Stream that writes to both the terminal and a log file."""
+
+    def __init__(self, terminal, log_file) -> None:
+        self.terminal = terminal
+        self.log_file = log_file
+
+    def write(self, text: str) -> int:
+        self.terminal.write(text)
+        self.log_file.write(text)
+        return len(text)
+
+    def flush(self) -> None:
+        self.terminal.flush()
+        self.log_file.flush()
+
+    def __getattr__(self, name: str):
+        # defer everything else (isatty, encoding, ...) to the terminal
+        return getattr(self.terminal, name)
+
+
 def main() -> None:
-    """Download, clean and save the CRSP, CBOE and Fama-French datasets used throughout the paper."""
-    df_raw = download_sp500_raw(START_DATE, END_DATE)
+    """Download, clean and save the CRSP, CBOE and Fama-French datasets used throughout the paper, copying all printed output to LOG_PATH."""
+    os.makedirs(DATA, exist_ok=True)
+    with (
+        open(LOG_PATH, "w") as log_file,
+        contextlib.redirect_stdout(Tee(sys.stdout, log_file)),
+    ):
+        df_raw = download_sp500_raw(START_DATE, END_DATE)
 
-    sp500_members = download_sp500_membership(START_DATE)
+        sp500_members = download_sp500_membership(START_DATE)
 
-    df_clean = clean_raw_data(data_raw=df_raw)
+        df_clean_full = clean_raw_data(data_raw=df_raw)
 
-    format_data(
-        df_clean_full=df_clean, sp500_members=sp500_members, start_date=START_DATE
-    )
+        format_data(
+            df_clean_full=df_clean_full,
+            sp500_members=sp500_members,
+            start_date=START_DATE,
+        )
 
-    fetch_dspx()
+        fetch_dspx()
 
-    fetch_fama_french()
+        fetch_fama_french()
+
+        print(f"Saved log to {relative_path(LOG_PATH)}")
 
 
 if __name__ == "__main__":

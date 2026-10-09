@@ -4,6 +4,7 @@ figures/
 results/
 __pycache__/
 .vscode/
+.DS_Store
 6_Preparing_backtesting_daily.ipynb
 review/
 CODE_REVIEW.md

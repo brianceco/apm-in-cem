@@ -8,13 +8,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from paths import DATA, relative_path
 
-START_YEAR = 1977  
+START_YEAR = 1977
 
-# check that the raw and clean data files have been written by src/data.py
+# check that the data files have been written by src/data.py
 required = [
     DATA / "raw" / f"sp500_raw_{START_YEAR}.parquet",
     DATA / "raw" / f"sp500_membership_{START_YEAR}.csv",
-    DATA / "processed" / f"sp500_clean_{START_YEAR}.parquet",
     DATA / "processed" / f"rets_monthly_{START_YEAR}.csv",
     DATA / "processed" / f"caps_monthly_{START_YEAR}.csv",
     DATA / "processed" / f"mkt_wgts_monthly_{START_YEAR}.csv",

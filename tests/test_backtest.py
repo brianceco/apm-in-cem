@@ -20,7 +20,6 @@ required = [
     PROCESSED / f"mkt_wgts_monthly_{START_YEAR}.csv",
     PROCESSED / f"eql_wgts_monthly_{START_YEAR}.csv",
     PROCESSED / f"signals_{START_YEAR}.csv",
-    PROCESSED / f"signals_clean_{START_YEAR}.csv",
 ]
 missing = [relative_path(path) for path in required if not path.exists()]
 if missing:
@@ -52,12 +51,6 @@ monthly_eql_wgts = pd.read_csv(
 
 signals = pd.read_csv(
     PROCESSED / f"signals_{START_YEAR}.csv",
-    index_col=0,
-    parse_dates=True,
-)
-
-signals_clean = pd.read_csv(
-    PROCESSED / f"signals_clean_{START_YEAR}.csv",
     index_col=0,
     parse_dates=True,
 )

@@ -350,8 +350,9 @@ def plot_sim_portfolio_performance(
     sdd_model: SDDModel,
     sim_diversity: pd.DataFrame,
     sim_dispersion: pd.DataFrame,
-    Lbda_1_sim: float,
-    Lbda_2_sim: float,
+    gamma: float | None,
+    Lbda_1: float,
+    Lbda_2: float,
     target_active_risk: float,
     save_fig: bool = True,
     **kwargs,
@@ -359,8 +360,9 @@ def plot_sim_portfolio_performance(
     """Backtest the tilt processes on one simulated path and plot the resulting portfolio performance."""
     lbda_dict, gross_log_V_dict, net_log_V_dict, _, _ = sdd_model.backtest(
         target_active_risk=target_active_risk,
-        Lbda_1=Lbda_1_sim,
-        Lbda_2=Lbda_2_sim,
+        gamma=gamma,
+        Lbda_1=Lbda_1,
+        Lbda_2=Lbda_2,
         samples=[sim_diversity, sim_dispersion],
     )
 

@@ -705,7 +705,7 @@ class LbdaPortfolio:
         res = root_scalar(calibrate_gamma, x0=gamma_init, method="secant")
 
         gamma = res.root
-        print(f"[{name}] Calibrated gamma: {gamma:.2f}")
+        print(f"gamma: {gamma:.2f}")
         return gamma
 
     def _get_mkt_wealth(self, tc: float, start_date: str, end_date: str) -> pd.Series:
@@ -845,7 +845,7 @@ class LbdaPortfolio:
 
         if res.success:
             Lbda_2_opt = res.x[0]
-            print(f"[{name}] Calibrated Lbda_2: {Lbda_2_opt:.3f}")
+            print(f"Lbda_2: {Lbda_2_opt:.3f}")
             self.Lbda_2_dict[name] = Lbda_2_opt
             lbda = self.signal_dict[name].get_lbda(
                 gamma=gamma, Lbda_1=Lbda_1, Lbda_2=Lbda_2_opt
